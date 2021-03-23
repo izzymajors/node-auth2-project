@@ -1,6 +1,22 @@
+const jwt = require('jsonwebtoken')
 const { JWT_SECRET } = require("../secrets"); // use this secret!
 
 const restricted = (req, res, next) => {
+  const token = req.headers.authorization;
+
+  if (!token) {
+    res.status(401).json({ message: 'you shall not pass'})
+  } else {
+    jwt.verify(token, JWT_SECRET, (err, decoded) => {
+      if (err) {
+        res.status(401).json ({ message: 'token bad'})
+      } else {
+        req.decodedJwt = decoded
+        next();
+       }
+    });
+   }
+  }
   /*
     If the user does not provide a token in the Authorization header:
     status 401
@@ -32,7 +48,13 @@ const only = role_name => (req, res, next) => {
 }
 
 
-const checkUsernameExists = (req, res, next) => {
+async function checkUsernameExists(req, res, next) { 
+  const user = await User.findBy({ username: req.body.username}).first()
+   if (user && user.username) {
+     res.status(401).json({message: 'invalid credentials'})
+   } else {
+     next();
+   }
   /*
     If the username in req.body does NOT exist in the database
     status 401
